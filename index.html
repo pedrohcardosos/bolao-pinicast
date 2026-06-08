@@ -340,23 +340,6 @@
     margin-bottom: 10px;
   }
 
-  /* ── ABERTURA PALPITES ── */
-  .abertura-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: rgba(26,122,74,0.15); border: 1px solid rgba(26,122,74,0.3);
-    border-radius: 5px; padding: 2px 8px; font-size: 0.72rem;
-    color: #4cda8a; font-weight: 600; margin-left: 6px;
-  }
-  .abertura-badge.fechado {
-    background: rgba(192,57,43,0.15); border-color: rgba(192,57,43,0.3); color: #ff7b6b;
-  }
-  .grupo-badge {
-    display: inline-block; padding: 1px 6px; border-radius: 4px;
-    background: rgba(201,168,76,0.15); color: var(--dourado-claro);
-    font-size: 0.7rem; font-weight: 700; margin-right: 4px;
-  }
-  .preload-btn-wrap { margin-bottom: 16px; }
-
   /* ── NOTA / BALÃO ── */
   .corrida-lane {
     position: relative;
@@ -601,9 +584,28 @@
 
   <!-- ── HISTÓRICO PARTICIPANTE ── -->
   <div class="page" id="page-historico">
-    <div class="card">
-      <div class="card-title">📋 Meus Palpites</div>
-      <div id="historico-container"></div>
+    <!-- Sub-tabs: Meus Palpites / Todos -->
+    <div class="sub-tabs" id="hist-subtabs">
+      <button class="sub-tab active" onclick="showHistTab('meus', this)">📋 Meus Palpites</button>
+      <button class="sub-tab" onclick="showHistTab('todos', this)">👥 Todos os Participantes</button>
+    </div>
+    <!-- Meus Palpites -->
+    <div id="hist-tab-meus">
+      <div class="card">
+        <div class="card-title">📋 Meus Palpites</div>
+        <div id="historico-container"></div>
+      </div>
+    </div>
+    <!-- Todos os Participantes -->
+    <div id="hist-tab-todos" style="display:none">
+      <div class="card">
+        <div class="card-title">👥 Palpites de Todos</div>
+        <label>Selecione o participante</label>
+        <select id="hist-part-select" onchange="renderHistoricoGeral()">
+          <option value="">-- Selecione --</option>
+        </select>
+        <div id="hist-geral-container"></div>
+      </div>
     </div>
   </div>
 
@@ -682,28 +684,15 @@
 
   <!-- ── ADMIN: JOGOS ── -->
   <div class="page" id="page-admin-jogos">
-
-    <!-- Botão pré-carga -->
-    <div style="margin-bottom:16px">
-      <button class="btn btn-verde btn-full" onclick="precarregarJogosCopa()" style="padding:14px;font-size:0.92rem">
-        🌍 Pre-carregar todos os jogos da Fase de Grupos (48 jogos)
-      </button>
-      <p class="text-dim" style="margin-top:8px;text-align:center;font-size:0.78rem">Carrega os 48 jogos da fase de grupos com times, datas, horarios e abertura de palpites ja configurados.</p>
-    </div>
-
     <div class="card">
-      <div class="card-title">⚽ Cadastrar Jogo Manualmente</div>
+      <div class="card-title">⚽ Cadastrar Jogo</div>
       <div class="grid-2">
         <div><label>Time A (Casa)</label><input type="text" id="jogo-timeA" placeholder="Ex: Brasil"></div>
         <div><label>Time B (Visitante)</label><input type="text" id="jogo-timeB" placeholder="Ex: Marrocos"></div>
       </div>
       <div class="grid-2">
-        <div><label>Data do jogo</label><input type="date" id="jogo-data"></div>
-        <div><label>Horario do jogo (Brasilia)</label><input type="time" id="jogo-hora"></div>
-      </div>
-      <div class="grid-2">
-        <div><label>Abrir palpites em</label><input type="date" id="jogo-abertura-data"></div>
-        <div><label>Horario abertura</label><input type="time" id="jogo-abertura-hora" value="12:00"></div>
+        <div><label>Data</label><input type="date" id="jogo-data"></div>
+        <div><label>Horário (Brasília)</label><input type="time" id="jogo-hora"></div>
       </div>
       <div class="supercast-row">
         <label class="supercast-toggle" id="supercast-label">
@@ -717,7 +706,6 @@
       </div>
       <button class="btn btn-primary" onclick="addJogo()">+ Cadastrar Jogo</button>
     </div>
-
     <div class="card">
       <div class="card-title">📋 Jogos Cadastrados</div>
       <div id="lista-jogos-admin"></div>
@@ -728,7 +716,13 @@
   <div class="page" id="page-admin-resultados">
     <div class="card">
       <div class="card-title">📊 Inserir Resultados</div>
-      <p class="text-dim" style="margin-bottom:14px">Jogos com horário já passado aparecem aqui.</p>
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <label>Filtrar por data</label>
+          <input type="date" id="filtro-data-resultado" onchange="renderResultadosAdmin()" style="margin-bottom:0">
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('filtro-data-resultado').value='';renderResultadosAdmin()">Ver todos</button>
+      </div>
       <div id="lista-resultados-admin"></div>
     </div>
   </div>
@@ -1016,14 +1010,6 @@ function isPalpitesBloqueados() {
   const limite = new Date(); limite.setHours(h, m, 0, 0);
   return agora >= limite;
 }
-function isJogoAberto(jogo) {
-  if (!jogo.aberturaData) return true; // sem restrição = aberto
-  const agora = new Date();
-  const [h, m] = (jogo.aberturaHora || '12:00').split(':').map(Number);
-  const abertura = new Date(jogo.aberturaData + 'T00:00:00');
-  abertura.setHours(h, m, 0, 0);
-  return agora >= abertura;
-}
 function fmtData(data) {
   if (!data) return '';
   const [y,m,d] = data.split('-');
@@ -1043,7 +1029,7 @@ function getPontos(palp, res, jogo) {
 // ── PALPITES ──
 function renderJogosDia() {
   const hoje = getHoje();
-  const jogosDia = Object.values(jogos).filter(j => j.data === hoje && isJogoAberto(j)).sort((a,b) => a.hora.localeCompare(b.hora));
+  const jogosDia = Object.values(jogos).filter(j => j.data === hoje).sort((a,b) => a.hora.localeCompare(b.hora));
   const container = document.getElementById('jogos-do-dia-container');
   const bloqueadoEl = document.getElementById('palpites-bloqueados');
   const btnEnviar = document.getElementById('btn-enviar-container');
@@ -1069,11 +1055,7 @@ function renderJogosDia() {
     const disabled = bloqueado ? 'disabled' : '';
     return `
       <div class="jogo-card">
-        <div class="jogo-meta">
-          Grupo ${j.grupo ? '<span class=\"grupo-badge\">'+j.grupo+'</span>' : ''} ⏰ ${j.hora} · ${fmtData(j.data)}
-          ${j.supercast ? `&nbsp;<span class="badge-supercast">⭐ SUPERCAST +${j.supercastPts}pts</span>` : ''}
-          ${j.aberturaData ? `<span class="abertura-badge ${isJogoAberto(j) ? '' : 'fechado'}">${isJogoAberto(j) ? '🟢 Aberto' : '🔴 Abre '+fmtData(j.aberturaData)+' '+j.aberturaHora}</span>` : ''}
-        </div>
+        <div class="jogo-meta">⏰ ${j.hora} · ${fmtData(j.data)}${j.supercast ? ` &nbsp;<span class="badge-supercast">⭐ SUPERCAST +${j.supercastPts}pts</span>` : ''}</div>
         <div class="jogo-times">
           <div class="jogo-time">${j.timeA}</div>
           <div class="jogo-vs">VS</div>
@@ -1115,6 +1097,73 @@ window.enviarPalpites = async function() {
 };
 
 // ── HISTÓRICO PARTICIPANTE ──
+window.showHistTab = function(tab, btn) {
+  document.getElementById('hist-tab-meus').style.display = tab === 'meus' ? 'block' : 'none';
+  document.getElementById('hist-tab-todos').style.display = tab === 'todos' ? 'block' : 'none';
+  document.querySelectorAll('#hist-subtabs .sub-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'todos') {
+    // Popular o select com participantes
+    const sel = document.getElementById('hist-part-select');
+    if (sel) {
+      const atual = sel.value;
+      sel.innerHTML = '<option value="">-- Selecione --</option>' +
+        Object.entries(participantes)
+          .filter(([uid]) => uid !== usuarioLogado?.uid)
+          .map(([uid, p]) => `<option value="${uid}" ${uid === atual ? 'selected' : ''}>${p.nickname || p.usuario}</option>`)
+          .join('');
+      if (atual) renderHistoricoGeral();
+    }
+  }
+};
+
+window.renderHistoricoGeral = function() {
+  const uid = document.getElementById('hist-part-select')?.value;
+  const container = document.getElementById('hist-geral-container');
+  if (!container) return;
+  if (!uid) { container.innerHTML = ''; return; }
+
+  const part = participantes[uid];
+  const seuspalpites = palpites[uid] || {};
+  const jogosList = Object.values(jogos)
+    .filter(j => seuspalpites[j.id] !== undefined)
+    .sort((a,b) => (b.data+b.hora).localeCompare(a.data+a.hora));
+
+  if (!jogosList.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><div>Nenhum palpite enviado ainda.</div></div>';
+    return;
+  }
+
+  const porDia = {};
+  jogosList.forEach(j => { if (!porDia[j.data]) porDia[j.data] = []; porDia[j.data].push(j); });
+
+  container.innerHTML = `<div style="margin-bottom:12px" class="alert alert-info">👤 ${part.nickname || part.usuario}</div>` +
+    Object.entries(porDia).sort((a,b) => b[0].localeCompare(a[0])).map(([data, gs]) => `
+    <div class="hist-dia">
+      <div class="hist-dia-titulo">📅 ${fmtData(data)}</div>
+      ${gs.map(j => {
+        const palp = seuspalpites[j.id];
+        const res = resultados[j.id];
+        const pts = getPontos(palp, res, j);
+        const scLabel = j.supercast ? ` ⭐+${j.supercastPts}` : '';
+        let ptsBadge = pts >= 5
+          ? `<span class="badge badge-verde">+${pts} pts${scLabel}</span>`
+          : pts === 3 ? '<span class="badge badge-dourado">+3 pts</span>'
+          : pts === 0 && res ? '<span class="badge badge-cinza">0 pts</span>'
+          : '<span class="badge badge-cinza">Pendente</span>';
+        return `
+          <div class="hist-jogo-row">
+            <div class="hist-times">${j.timeA} × ${j.timeB}${j.supercast ? ' <span class="badge-supercast">⭐ SC</span>' : ''}</div>
+            <div class="hist-placar">
+              <span class="meu">Palpite: ${palp.a}×${palp.b}</span>
+              ${res ? `<span class="sep">|</span><span class="real">Real: ${res.a}×${res.b}</span>` : ''}
+            </div>
+            ${ptsBadge}
+          </div>`;
+      }).join('')}
+    </div>`).join('');
+};
+
 function renderHistorico() {
   const container = document.getElementById('historico-container');
   if (!container) return;
@@ -1536,8 +1585,6 @@ window.addJogo = async function() {
   const timeB = document.getElementById('jogo-timeB').value.trim();
   const data = document.getElementById('jogo-data').value;
   const hora = document.getElementById('jogo-hora').value;
-  const aberturaData = document.getElementById('jogo-abertura-data').value || data;
-  const aberturaHora = document.getElementById('jogo-abertura-hora').value || '12:00';
   if (!timeA || !timeB || !data || !hora) { alert('Preencha todos os campos.'); return; }
 
   const isSupercast = document.getElementById('jogo-supercast').checked;
@@ -1545,7 +1592,7 @@ window.addJogo = async function() {
   if (isSupercast && supercastPtsVal <= 0) { alert('Informe os pontos extras do SuperCast.'); return; }
 
   const id = 'j' + Date.now();
-  const jogoData = { id, timeA, timeB, data, hora, aberturaData, aberturaHora };
+  const jogoData = { id, timeA, timeB, data, hora };
   if (isSupercast) { jogoData.supercast = true; jogoData.supercastPts = supercastPtsVal; }
 
   try {
@@ -1557,33 +1604,6 @@ window.addJogo = async function() {
     document.getElementById('supercast-pts-container').style.display = 'none';
     document.getElementById('supercast-label').classList.remove('ativo');
   } catch(e) { alert('Erro ao salvar jogo: ' + e.message); }
-};
-
-const JOGOS_COPA_2026 = [{"id": "jg001", "timeA": "México", "timeB": "África do Sul", "data": "2026-06-11", "hora": "16:00", "grupo": "A", "aberturaData": "2026-06-10", "aberturaHora": "12:00"}, {"id": "jg002", "timeA": "Coreia do Sul", "timeB": "Europa D", "data": "2026-06-11", "hora": "23:00", "grupo": "A", "aberturaData": "2026-06-10", "aberturaHora": "12:00"}, {"id": "jg003", "timeA": "Canadá", "timeB": "Europa A", "data": "2026-06-12", "hora": "16:00", "grupo": "B", "aberturaData": "2026-06-11", "aberturaHora": "12:00"}, {"id": "jg004", "timeA": "Estados Unidos", "timeB": "Paraguai", "data": "2026-06-12", "hora": "22:00", "grupo": "D", "aberturaData": "2026-06-11", "aberturaHora": "12:00"}, {"id": "jg005", "timeA": "Austrália", "timeB": "Europa C", "data": "2026-06-13", "hora": "01:00", "grupo": "D", "aberturaData": "2026-06-12", "aberturaHora": "12:00"}, {"id": "jg006", "timeA": "Catar", "timeB": "Suíça", "data": "2026-06-13", "hora": "16:00", "grupo": "B", "aberturaData": "2026-06-12", "aberturaHora": "12:00"}, {"id": "jg007", "timeA": "Brasil", "timeB": "Marrocos", "data": "2026-06-13", "hora": "19:00", "grupo": "C", "aberturaData": "2026-06-12", "aberturaHora": "12:00"}, {"id": "jg008", "timeA": "Haiti", "timeB": "Escócia", "data": "2026-06-13", "hora": "22:00", "grupo": "C", "aberturaData": "2026-06-12", "aberturaHora": "12:00"}, {"id": "jg009", "timeA": "Alemanha", "timeB": "Curaçao", "data": "2026-06-14", "hora": "14:00", "grupo": "E", "aberturaData": "2026-06-13", "aberturaHora": "12:00"}, {"id": "jg010", "timeA": "Holanda", "timeB": "Japão", "data": "2026-06-14", "hora": "17:00", "grupo": "F", "aberturaData": "2026-06-13", "aberturaHora": "12:00"}, {"id": "jg011", "timeA": "Costa do Marfim", "timeB": "Equador", "data": "2026-06-14", "hora": "20:00", "grupo": "E", "aberturaData": "2026-06-13", "aberturaHora": "12:00"}, {"id": "jg012", "timeA": "Europa B", "timeB": "Tunísia", "data": "2026-06-14", "hora": "23:00", "grupo": "F", "aberturaData": "2026-06-13", "aberturaHora": "12:00"}, {"id": "jg013", "timeA": "Espanha", "timeB": "Cabo Verde", "data": "2026-06-15", "hora": "13:00", "grupo": "H", "aberturaData": "2026-06-14", "aberturaHora": "12:00"}, {"id": "jg014", "timeA": "Bélgica", "timeB": "Egito", "data": "2026-06-15", "hora": "16:00", "grupo": "G", "aberturaData": "2026-06-14", "aberturaHora": "12:00"}, {"id": "jg015", "timeA": "Arábia Saudita", "timeB": "Uruguai", "data": "2026-06-15", "hora": "19:00", "grupo": "H", "aberturaData": "2026-06-14", "aberturaHora": "12:00"}, {"id": "jg016", "timeA": "Irã", "timeB": "Nova Zelândia", "data": "2026-06-15", "hora": "22:00", "grupo": "G", "aberturaData": "2026-06-14", "aberturaHora": "12:00"}, {"id": "jg017", "timeA": "Argentina", "timeB": "Argélia", "data": "2026-06-16", "hora": "14:00", "grupo": "J", "aberturaData": "2026-06-15", "aberturaHora": "12:00"}, {"id": "jg018", "timeA": "França", "timeB": "Senegal", "data": "2026-06-16", "hora": "16:00", "grupo": "I", "aberturaData": "2026-06-15", "aberturaHora": "12:00"}, {"id": "jg019", "timeA": "Repescagem 2", "timeB": "Noruega", "data": "2026-06-16", "hora": "19:00", "grupo": "I", "aberturaData": "2026-06-15", "aberturaHora": "12:00"}, {"id": "jg020", "timeA": "Áustria", "timeB": "Jordânia", "data": "2026-06-17", "hora": "01:00", "grupo": "J", "aberturaData": "2026-06-16", "aberturaHora": "12:00"}, {"id": "jg021", "timeA": "Portugal", "timeB": "Repescagem 1", "data": "2026-06-17", "hora": "14:00", "grupo": "K", "aberturaData": "2026-06-16", "aberturaHora": "12:00"}, {"id": "jg022", "timeA": "Inglaterra", "timeB": "Croácia", "data": "2026-06-17", "hora": "17:00", "grupo": "L", "aberturaData": "2026-06-16", "aberturaHora": "12:00"}, {"id": "jg023", "timeA": "Gana", "timeB": "Panamá", "data": "2026-06-17", "hora": "20:00", "grupo": "L", "aberturaData": "2026-06-16", "aberturaHora": "12:00"}, {"id": "jg024", "timeA": "Uzbequistão", "timeB": "Colômbia", "data": "2026-06-17", "hora": "23:00", "grupo": "K", "aberturaData": "2026-06-16", "aberturaHora": "12:00"}, {"id": "jg025", "timeA": "Europa D", "timeB": "África do Sul", "data": "2026-06-18", "hora": "13:00", "grupo": "A", "aberturaData": "2026-06-17", "aberturaHora": "12:00"}, {"id": "jg026", "timeA": "Suíça", "timeB": "Europa A", "data": "2026-06-18", "hora": "16:00", "grupo": "B", "aberturaData": "2026-06-17", "aberturaHora": "12:00"}, {"id": "jg027", "timeA": "Canadá", "timeB": "Catar", "data": "2026-06-18", "hora": "19:00", "grupo": "B", "aberturaData": "2026-06-17", "aberturaHora": "12:00"}, {"id": "jg028", "timeA": "México", "timeB": "Coreia do Sul", "data": "2026-06-18", "hora": "22:00", "grupo": "A", "aberturaData": "2026-06-17", "aberturaHora": "12:00"}, {"id": "jg029", "timeA": "Europa C", "timeB": "Paraguai", "data": "2026-06-19", "hora": "01:00", "grupo": "D", "aberturaData": "2026-06-18", "aberturaHora": "12:00"}, {"id": "jg030", "timeA": "Estados Unidos", "timeB": "Austrália", "data": "2026-06-19", "hora": "16:00", "grupo": "D", "aberturaData": "2026-06-18", "aberturaHora": "12:00"}, {"id": "jg031", "timeA": "Escócia", "timeB": "Marrocos", "data": "2026-06-19", "hora": "19:00", "grupo": "C", "aberturaData": "2026-06-18", "aberturaHora": "12:00"}, {"id": "jg032", "timeA": "Brasil", "timeB": "Haiti", "data": "2026-06-19", "hora": "22:00", "grupo": "C", "aberturaData": "2026-06-18", "aberturaHora": "12:00"}, {"id": "jg033", "timeA": "Holanda", "timeB": "Europa B", "data": "2026-06-20", "hora": "14:00", "grupo": "F", "aberturaData": "2026-06-19", "aberturaHora": "12:00"}, {"id": "jg034", "timeA": "Alemanha", "timeB": "Costa do Marfim", "data": "2026-06-20", "hora": "17:00", "grupo": "E", "aberturaData": "2026-06-19", "aberturaHora": "12:00"}, {"id": "jg035", "timeA": "Equador", "timeB": "Curaçao", "data": "2026-06-20", "hora": "21:00", "grupo": "E", "aberturaData": "2026-06-19", "aberturaHora": "12:00"}, {"id": "jg036", "timeA": "Tunísia", "timeB": "Japão", "data": "2026-06-21", "hora": "01:00", "grupo": "F", "aberturaData": "2026-06-20", "aberturaHora": "12:00"}, {"id": "jg037", "timeA": "Espanha", "timeB": "Arábia Saudita", "data": "2026-06-21", "hora": "13:00", "grupo": "H", "aberturaData": "2026-06-20", "aberturaHora": "12:00"}, {"id": "jg038", "timeA": "Bélgica", "timeB": "Irã", "data": "2026-06-21", "hora": "16:00", "grupo": "G", "aberturaData": "2026-06-20", "aberturaHora": "12:00"}, {"id": "jg039", "timeA": "Uruguai", "timeB": "Cabo Verde", "data": "2026-06-21", "hora": "19:00", "grupo": "H", "aberturaData": "2026-06-20", "aberturaHora": "12:00"}, {"id": "jg040", "timeA": "Nova Zelândia", "timeB": "Egito", "data": "2026-06-21", "hora": "22:00", "grupo": "G", "aberturaData": "2026-06-20", "aberturaHora": "12:00"}, {"id": "jg041", "timeA": "Argentina", "timeB": "Áustria", "data": "2026-06-22", "hora": "14:00", "grupo": "J", "aberturaData": "2026-06-21", "aberturaHora": "12:00"}, {"id": "jg042", "timeA": "França", "timeB": "Repescagem 2", "data": "2026-06-22", "hora": "18:00", "grupo": "I", "aberturaData": "2026-06-21", "aberturaHora": "12:00"}, {"id": "jg043", "timeA": "Noruega", "timeB": "Senegal", "data": "2026-06-22", "hora": "21:00", "grupo": "I", "aberturaData": "2026-06-21", "aberturaHora": "12:00"}, {"id": "jg044", "timeA": "Jordânia", "timeB": "Argélia", "data": "2026-06-23", "hora": "00:00", "grupo": "J", "aberturaData": "2026-06-22", "aberturaHora": "12:00"}, {"id": "jg045", "timeA": "Portugal", "timeB": "Uzbequistão", "data": "2026-06-23", "hora": "14:00", "grupo": "K", "aberturaData": "2026-06-22", "aberturaHora": "12:00"}, {"id": "jg046", "timeA": "Inglaterra", "timeB": "Gana", "data": "2026-06-23", "hora": "17:00", "grupo": "L", "aberturaData": "2026-06-22", "aberturaHora": "12:00"}, {"id": "jg047", "timeA": "Panamá", "timeB": "Croácia", "data": "2026-06-23", "hora": "20:00", "grupo": "L", "aberturaData": "2026-06-22", "aberturaHora": "12:00"}, {"id": "jg048", "timeA": "Colômbia", "timeB": "Repescagem 1", "data": "2026-06-23", "hora": "23:00", "grupo": "K", "aberturaData": "2026-06-22", "aberturaHora": "12:00"}, {"id": "jg049", "timeA": "Suíça", "timeB": "Canadá", "data": "2026-06-24", "hora": "16:00", "grupo": "B", "aberturaData": "2026-06-23", "aberturaHora": "12:00"}, {"id": "jg050", "timeA": "Europa A", "timeB": "Catar", "data": "2026-06-24", "hora": "16:00", "grupo": "B", "aberturaData": "2026-06-23", "aberturaHora": "12:00"}, {"id": "jg051", "timeA": "Escócia", "timeB": "Brasil", "data": "2026-06-24", "hora": "19:00", "grupo": "C", "aberturaData": "2026-06-23", "aberturaHora": "12:00"}, {"id": "jg052", "timeA": "Marrocos", "timeB": "Haiti", "data": "2026-06-24", "hora": "19:00", "grupo": "C", "aberturaData": "2026-06-23", "aberturaHora": "12:00"}, {"id": "jg053", "timeA": "Europa D", "timeB": "México", "data": "2026-06-24", "hora": "22:00", "grupo": "A", "aberturaData": "2026-06-23", "aberturaHora": "12:00"}, {"id": "jg054", "timeA": "África do Sul", "timeB": "Coreia do Sul", "data": "2026-06-24", "hora": "22:00", "grupo": "A", "aberturaData": "2026-06-23", "aberturaHora": "12:00"}, {"id": "jg055", "timeA": "Equador", "timeB": "Alemanha", "data": "2026-06-25", "hora": "17:00", "grupo": "E", "aberturaData": "2026-06-24", "aberturaHora": "12:00"}, {"id": "jg056", "timeA": "Curaçao", "timeB": "Costa do Marfim", "data": "2026-06-25", "hora": "17:00", "grupo": "E", "aberturaData": "2026-06-24", "aberturaHora": "12:00"}, {"id": "jg057", "timeA": "Japão", "timeB": "Europa B", "data": "2026-06-25", "hora": "20:00", "grupo": "F", "aberturaData": "2026-06-24", "aberturaHora": "12:00"}, {"id": "jg058", "timeA": "Tunísia", "timeB": "Holanda", "data": "2026-06-25", "hora": "20:00", "grupo": "F", "aberturaData": "2026-06-24", "aberturaHora": "12:00"}, {"id": "jg059", "timeA": "Europa C", "timeB": "Estados Unidos", "data": "2026-06-25", "hora": "23:00", "grupo": "D", "aberturaData": "2026-06-24", "aberturaHora": "12:00"}, {"id": "jg060", "timeA": "Paraguai", "timeB": "Austrália", "data": "2026-06-25", "hora": "23:00", "grupo": "D", "aberturaData": "2026-06-24", "aberturaHora": "12:00"}, {"id": "jg061", "timeA": "Noruega", "timeB": "França", "data": "2026-06-26", "hora": "16:00", "grupo": "I", "aberturaData": "2026-06-25", "aberturaHora": "12:00"}, {"id": "jg062", "timeA": "Senegal", "timeB": "Repescagem 2", "data": "2026-06-26", "hora": "16:00", "grupo": "I", "aberturaData": "2026-06-25", "aberturaHora": "12:00"}, {"id": "jg063", "timeA": "Cabo Verde", "timeB": "Arábia Saudita", "data": "2026-06-26", "hora": "21:00", "grupo": "H", "aberturaData": "2026-06-25", "aberturaHora": "12:00"}, {"id": "jg064", "timeA": "Uruguai", "timeB": "Espanha", "data": "2026-06-26", "hora": "21:00", "grupo": "H", "aberturaData": "2026-06-25", "aberturaHora": "12:00"}, {"id": "jg065", "timeA": "Egito", "timeB": "Irã", "data": "2026-06-27", "hora": "00:00", "grupo": "G", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg066", "timeA": "Nova Zelândia", "timeB": "Bélgica", "data": "2026-06-27", "hora": "00:00", "grupo": "G", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg067", "timeA": "Panamá", "timeB": "Inglaterra", "data": "2026-06-27", "hora": "18:00", "grupo": "L", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg068", "timeA": "Croácia", "timeB": "Gana", "data": "2026-06-27", "hora": "18:00", "grupo": "L", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg069", "timeA": "Colômbia", "timeB": "Portugal", "data": "2026-06-27", "hora": "20:30", "grupo": "K", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg070", "timeA": "Repescagem 1", "timeB": "Uzbequistão", "data": "2026-06-27", "hora": "20:30", "grupo": "K", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg071", "timeA": "Argélia", "timeB": "Áustria", "data": "2026-06-27", "hora": "23:00", "grupo": "J", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}, {"id": "jg072", "timeA": "Jordânia", "timeB": "Argentina", "data": "2026-06-27", "hora": "23:00", "grupo": "J", "aberturaData": "2026-06-26", "aberturaHora": "12:00"}];
-
-window.precarregarJogosCopa = async function() {
-  const existentes = Object.keys(jogos).filter(k => k.startsWith('jg'));
-  if (existentes.length > 0) {
-    if (!confirm(`Já existem ${existentes.length} jogo(s) pré-carregados. Deseja recarregar todos (não apaga resultados)?`)) return;
-  } else {
-    if (!confirm('Carregar todos os 48 jogos da fase de grupos da Copa 2026?')) return;
-  }
-  try {
-    const updates = {};
-    JOGOS_COPA_2026.forEach(j => { updates['jogos/' + j.id] = j; });
-    await update(ref(db, '/'), updates);
-    alert('✅ 48 jogos da fase de grupos carregados com sucesso!');
-  } catch(e) { alert('Erro ao carregar jogos: ' + e.message); }
-};
-
-window.abrirJogoAgora = async function(jogoId) {
-  if (!confirm('Abrir palpites para este jogo agora?')) return;
-  try {
-    const agora = new Date();
-    const dataHoje = agora.toISOString().split('T')[0];
-    const horaAgora = agora.getHours().toString().padStart(2,'0') + ':' + agora.getMinutes().toString().padStart(2,'0');
-    await update(ref(db, 'jogos/' + jogoId), { aberturaData: dataHoje, aberturaHora: horaAgora });
-  } catch(e) { alert('Erro ao abrir jogo: ' + e.message); }
 };
 
 window.removeJogo = async function(id) {
@@ -1605,12 +1625,7 @@ function renderJogosAdmin() {
       <div class="admin-jogo-row">
         <span><strong>${j.timeA}</strong> × <strong>${j.timeB}</strong></span>
         <span class="text-dim">${fmtData(j.data)} ${j.hora}</span>
-        ${j.grupo ? `<span class="grupo-badge">Gr.${j.grupo}</span>` : ''}
         ${j.supercast ? `<span class="badge-supercast">⭐ +${j.supercastPts}pts</span>` : ''}
-        ${j.aberturaData && !isJogoAberto(j)
-          ? `<span class="abertura-badge fechado">🔴 ${fmtData(j.aberturaData)}</span>
-             <button class="btn btn-verde btn-sm" onclick="abrirJogoAgora('${j.id}')">🟢 Abrir</button>`
-          : `<span class="abertura-badge">🟢 Aberto</span>`}
         ${res ? `<span class="badge badge-verde">${res.a}×${res.b}</span>` : '<span class="badge badge-cinza">Pendente</span>'}
         <button class="btn btn-danger btn-sm" onclick="removeJogo('${j.id}')">✕</button>
       </div>`;
@@ -1622,15 +1637,22 @@ function renderResultadosAdmin() {
   const el = document.getElementById('lista-resultados-admin');
   if (!el) return;
   const agora = new Date();
-  const lista = Object.values(jogos)
+  const filtroData = document.getElementById('filtro-data-resultado')?.value || '';
+  let lista = Object.values(jogos)
     .filter(j => new Date(j.data + 'T' + j.hora) <= agora)
     .sort((a,b) => (a.data+a.hora).localeCompare(b.data+b.hora));
-  if (!lista.length) { el.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><div>Nenhum jogo encerrado ainda.</div></div>'; return; }
+  if (filtroData) lista = lista.filter(j => j.data === filtroData);
+  if (!lista.length) {
+    el.innerHTML = filtroData
+      ? `<div class="empty-state"><div class="icon">📅</div><div>Nenhum jogo encerrado em ${fmtData(filtroData)}.</div></div>`
+      : '<div class="empty-state"><div class="icon">⏳</div><div>Nenhum jogo encerrado ainda.</div></div>';
+    return;
+  }
   el.innerHTML = lista.map(j => {
     const res = resultados[j.id];
     return `
       <div class="admin-jogo-row">
-        <span style="min-width:160px"><strong>${j.timeA}</strong> vs <strong>${j.timeB}</strong><br><span class="text-dim">${fmtData(j.data)}</span></span>
+        <span style="min-width:160px"><strong>${j.timeA}</strong> vs <strong>${j.timeB}</strong><br><span class="text-dim">${fmtData(j.data)} ${j.hora}</span></span>
         <div class="admin-placar-group">
           <input type="number" min="0" max="30" value="${res?.a ?? ''}" placeholder="0" id="res-a-${j.id}">
           <span class="placar-x">×</span>
