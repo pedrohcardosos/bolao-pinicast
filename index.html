@@ -490,13 +490,12 @@
   .bottom-nav-btn.active { color: var(--dourado); }
   .bottom-nav-btn.active .bn-icon { filter: drop-shadow(0 0 4px rgba(201,168,76,0.5)); }
 
+  /* Bottom nav sempre visível, header sem nav-tabs */
+  #nav-tabs-participante, #nav-tabs-admin { display: none !important; }
+  .bottom-nav { display: block !important; }
+  .page { padding-bottom: 80px; }
+
   @media (max-width: 640px) {
-    .bottom-nav { display: block; }
-    /* esconder nav do header em mobile */
-    #nav-tabs-participante, #nav-tabs-admin { display: none !important; }
-    /* padding extra no conteúdo pra não ficar atrás do bottom nav */
-    .page { padding-bottom: 80px; }
-    /* header mais compacto */
     .header { padding: 8px 12px; }
     .header-right .btn { padding: 6px 10px; font-size: 0.78rem; }
   }
@@ -567,7 +566,7 @@
         <button class="nav-tab" onclick="showPage('ranking', this)">🏆</button>
         <button class="nav-tab" onclick="showPage('admin-config', this)">⚙️</button>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="logout()">Sair</button>
+      <button class="btn btn-secondary btn-sm" onclick="logout()" style="display:none">Sair</button>
     </div>
   </div>
 
@@ -719,7 +718,7 @@
       <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
         <div style="flex:1;min-width:140px">
           <label>Filtrar por data</label>
-          <input type="date" id="filtro-data-resultado" onchange="renderResultadosAdmin()" style="margin-bottom:0">
+          <input type="date" id="filtro-data-resultado" onchange="renderResultadosAdmin()" oninput="renderResultadosAdmin()" style="margin-bottom:0">
         </div>
         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('filtro-data-resultado').value='';renderResultadosAdmin()">Ver todos</button>
       </div>
