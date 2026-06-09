@@ -993,7 +993,15 @@ window.showPage = function(page, btn) {
     btn.classList.add('active');
   }
   if (page === 'ranking') renderRanking();
-  if (page === 'historico') renderHistorico();
+  if (page === 'historico') {
+    renderHistorico();
+    // Garantir que sub-tab ativa está correta
+    const tabMeus = document.getElementById('hist-tab-meus');
+    const tabTodos = document.getElementById('hist-tab-todos');
+    if (tabMeus) tabMeus.style.display = 'block';
+    if (tabTodos) tabTodos.style.display = 'none';
+    document.querySelectorAll('#hist-subtabs .sub-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  }
   if (page === 'perfil') renderPerfil();
   if (page === 'admin-resultados') renderResultadosAdmin();
   if (page === 'admin-jogos') renderJogosAdmin();
@@ -1097,18 +1105,19 @@ window.enviarPalpites = async function() {
 
 // ── HISTÓRICO PARTICIPANTE ──
 window.showHistTab = function(tab, btn) {
-  document.getElementById('hist-tab-meus').style.display = tab === 'meus' ? 'block' : 'none';
-  document.getElementById('hist-tab-todos').style.display = tab === 'todos' ? 'block' : 'none';
+  const tabMeus = document.getElementById('hist-tab-meus');
+  const tabTodos = document.getElementById('hist-tab-todos');
+  if (tabMeus) tabMeus.style.display = tab === 'meus' ? 'block' : 'none';
+  if (tabTodos) tabTodos.style.display = tab === 'todos' ? 'block' : 'none';
   document.querySelectorAll('#hist-subtabs .sub-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   if (tab === 'todos') {
-    // Popular o select com participantes
     const sel = document.getElementById('hist-part-select');
     if (sel) {
       const atual = sel.value;
       sel.innerHTML = '<option value="">-- Selecione --</option>' +
         Object.entries(participantes)
-          .filter(([uid]) => uid !== usuarioLogado?.uid)
+          .sort((a,b) => (a[1].nickname||a[1].usuario).localeCompare(b[1].nickname||b[1].usuario))
           .map(([uid, p]) => `<option value="${uid}" ${uid === atual ? 'selected' : ''}>${p.nickname || p.usuario}</option>`)
           .join('');
       if (atual) renderHistoricoGeral();
@@ -1636,9 +1645,19 @@ function renderResultadosAdmin() {
   const el = document.getElementById('lista-resultados-admin');
   if (!el) return;
   const agora = new Date();
-  const filtroData = document.getElementById('filtro-data-resultado')?.value || '';
+  const filtroEl = document.getElementById('filtro-data-resultado');
+  const filtroData = filtroEl ? filtroEl.value : '';
   let lista = Object.values(jogos)
-    .filter(j => new Date(j.data + 'T' + j.hora) <= agora)
+    .filter(j => {
+      // Comparar data/hora como string local para evitar problemas de timezone
+      const jogoStr = j.data + 'T' + j.hora + ':00';
+      const agoraStr = agora.getFullYear() + '-' +
+        String(agora.getMonth()+1).padStart(2,'0') + '-' +
+        String(agora.getDate()).padStart(2,'0') + 'T' +
+        String(agora.getHours()).padStart(2,'0') + ':' +
+        String(agora.getMinutes()).padStart(2,'0') + ':00';
+      return jogoStr <= agoraStr;
+    })
     .sort((a,b) => (a.data+a.hora).localeCompare(b.data+b.hora));
   if (filtroData) lista = lista.filter(j => j.data === filtroData);
   if (!lista.length) {
